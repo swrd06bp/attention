@@ -35,16 +35,26 @@ class RetinaSensor(object):
     self.pth_size = pth_size
 
   def __call__(self, img_ph, loc):
+    nb_loc =  tf.add(loc[:, 2], 1)
+    nb_loc = tf.multiply(tf.cast(img_ph.shape[-1], tf.float32), nb_loc)
+    nb_loc = tf.cast(tf.divide(nb_loc, 2), tf.uint8)
+    nb_loc = tf.one_hot(nb_loc, 1)
+    nb_loc = tf.expand_dims(nb_loc, -1)  
+    nb_loc = tf.expand_dims(nb_loc, -1)  
+    nb_loc = tf.tile(nb_loc, [1, 28, 28, 3])
+    img_ph = tf.multiply(img_ph, nb_loc)
+    img_ph = tf.reduce_sum(img_ph, -1)
+
     img = tf.reshape(img_ph, [
       tf.shape(img_ph)[0],
-      self.img_size,
-      self.img_size,
+      self.img_size[0],
+      self.img_size[1],
       1
     ])
     pth = tf.image.extract_glimpse(
             img,
             [self.pth_size, self.pth_size],
-            loc)
+            loc[:, :2])
     return tf.reshape(pth, [tf.shape(loc)[0], self.pth_size*self.pth_size])
 
 class GlimpseNetwork(object):
@@ -95,14 +105,14 @@ class LocationNetwork(object):
     return loc, mean
 
 class RecurrentAttentionModel(object):
-  def __init__(self, img_size, pth_size, g_size, l_size, glimpse_output_size, 
+  def __init__(self, img_shape, pth_size, g_size, l_size, glimpse_output_size, 
                loc_dim, variance, 
                cell_size, num_glimpses, num_classes, 
                learning_rate, learning_rate_decay_factor, min_learning_rate, training_steps_per_epoch,
                max_gradient_norm, 
                is_training=False):
 
-    self.img_ph = tf.placeholder(tf.float32, [None, img_size*img_size])
+    self.img_ph = tf.placeholder(tf.float32, [None, img_shape[0], img_shape[1], img_shape[2]])
     self.lbl_ph = tf.placeholder(tf.int64, [None])
 
     self.global_step = tf.Variable(0, trainable=False)
@@ -117,7 +127,7 @@ class RecurrentAttentionModel(object):
     cell = BasicLSTMCell(cell_size)
 
     with tf.variable_scope('GlimpseNetwork'):
-      glimpse_network = GlimpseNetwork(img_size, pth_size, loc_dim, g_size, l_size, glimpse_output_size)
+      glimpse_network = GlimpseNetwork(img_shape, pth_size, loc_dim, g_size, l_size, glimpse_output_size)
     with tf.variable_scope('LocationNetwork'):
       location_network = LocationNetwork(loc_dim=loc_dim, rnn_output_size=cell.output_size, variance=variance, is_sampling=is_training)
 
@@ -162,10 +172,11 @@ class RecurrentAttentionModel(object):
 
     if is_training:
       # classification loss
-      self.xent = focal_loss(logits, self.lbl_ph)#tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.lbl_ph, logits=logits))
+      #self.xent = focal_loss(logits, self.lbl_ph)#
+      self.xent = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.lbl_ph, logits=logits))
       # RL reward
-      # reward = tf.cast(tf.equal(self.prediction, self.lbl_ph), tf.float32)
-      reward = tf.multiply(tf.cast(tf.equal(self.prediction, self.lbl_ph), tf.float32),0.1) + tf.multiply(tf.cast(tf.multiply(self.prediction, self.lbl_ph), tf.float32),0.9)
+      reward = tf.cast(tf.equal(self.prediction, self.lbl_ph), tf.float32)
+      # reward = tf.multiply(tf.cast(tf.equal(self.prediction, self.lbl_ph), tf.float32),0.1) + tf.multiply(tf.cast(tf.multiply(self.prediction, self.lbl_ph), tf.float32),0.9)
       rewards = tf.expand_dims(reward, 1)             # [batch_sz, 1]
       rewards = tf.tile(rewards, (1, num_glimpses))   # [batch_sz, timesteps]
       advantages = rewards - tf.stop_gradient(baselines)

@@ -39,16 +39,16 @@ training_steps_per_epoch = mnist.train.num_examples // FLAGS.batch_size
 
 
 
-ram = RecurrentAttentionModel(img_size=28, # MNIST: 28 * 28 
+ram = RecurrentAttentionModel(img_shape=(28, 28, 3), # MNIST: 28 * 28 
                               pth_size=FLAGS.patch_window_size,
                               g_size=FLAGS.g_size,
                               l_size=FLAGS.l_size,
                               glimpse_output_size=FLAGS.glimpse_output_size,
-                              loc_dim=2,   # (x,y)
+                              loc_dim=3,   # (x, y, number of images)
                               variance=FLAGS.variance, 
                               cell_size=FLAGS.cell_size,
                               num_glimpses=FLAGS.num_glimpses,
-                              num_classes=2,
+                              num_classes=10,
                               learning_rate=FLAGS.learning_rate,
                               learning_rate_decay_factor=FLAGS.learning_rate_decay_factor,
                               min_learning_rate=FLAGS.min_learning_rate,
@@ -63,16 +63,17 @@ saver = tf.train.Saver()
 with tf.Session() as sess:
   
   sess.run(tf.global_variables_initializer())
-  saver.restore(sess, "/tmp/model.ckpt")
-  print("Model restored.")
+  # saver.restore(sess, "/tmp/model.ckpt")
+  # print("Model restored.")
   
-  for step in xrange(FLAGS.num_steps):
+  for step in xrange(2*FLAGS.num_steps):
     images, labels = mnist.train.next_batch(FLAGS.batch_size)
+    images = np.reshape(images, [-1, 28, 28, 1])
     
-    labels_bak = deepcopy(labels)
-    labels[np.where(labels_bak>1)[0]] = 0
-    labels[np.where(labels_bak<=1)[0]] = 1
-    images = np.tile(images, [FLAGS.M, 1])
+    # labels_bak = deepcopy(labels)
+    # labels[np.where(labels_bak>1)[0]] = 0
+    # labels[np.where(labels_bak<=1)[0]] = 1
+    images = np.tile(images, [FLAGS.M, 1, 1, 3])
     labels = np.tile(labels, [FLAGS.M])
 
     output_feed = [ram.train_op, ram.loss, ram.xent, ram.reward, ram.advantage, ram.baselines_mse, ram.learning_rate]
@@ -96,37 +97,58 @@ with tf.Session() as sess:
         num_samples = steps_per_epoch * FLAGS.batch_size
         for test_step in xrange(steps_per_epoch):
           images, labels = dataset.next_batch(FLAGS.batch_size)
-          
-          labels_bak = deepcopy(labels)
-          labels[np.where(labels_bak>1)[0]] = 0
-          labels[np.where(labels_bak<=1)[0]] = 1
+          images = np.reshape(images, [-1, 28, 28, 1])
+          images = np.tile(images, [FLAGS.M, 1, 1, 3])
           labels_bak = labels
+	  labels = np.tile(labels, [FLAGS.M])
 
-          # Duplicate M times
-          images = np.tile(images, [FLAGS.M, 1])
-          labels = np.tile(labels, [FLAGS.M])
           softmax = sess.run(ram.softmax,
                                 feed_dict={
                                   ram.img_ph: images,
                                   ram.lbl_ph: labels
                                 })
-          softmax = np.reshape(softmax, [FLAGS.M, -1, 2])
+          softmax = np.reshape(softmax, [FLAGS.M, -1, 10])
           softmax = np.mean(softmax, 0)
           prediction = np.argmax(softmax, 1).flatten()
           correct_cnt += np.sum(prediction == labels_bak)
-          all_predictions.extend(prediction)
-          all_labels.extend(labels_bak)
-        
         acc = correct_cnt / num_samples
-        precision = get_precision(all_predictions, all_labels)
-        recall = get_recall(all_predictions, all_labels)
         if dataset == mnist.validation:
           logging.info('valid accuracy = {}'.format(acc))
-          logging.info('valid precision = {}'.format(precision))
-          logging.info('valid recall = {}'.format(recall))
         else:
           logging.info('test accuracy = {}'.format(acc))
-          logging.info('test precision = {}'.format(precision))
-          logging.info('test recall = {}'.format(recall))
-      save_path = saver.save(sess, "/tmp/model.ckpt")
-      print("Model saved in file: %s" % save_path)
+
+
+
+          # labels_bak = deepcopy(labels)
+          # labels[np.where(labels_bak>1)[0]] = 0
+          # labels[np.where(labels_bak<=1)[0]] = 1
+          # labels_bak = labels
+
+          # Duplicate M times
+          # images = np.tile(images, [FLAGS.M, 1, 1, 3])
+          # labels = np.tile(labels, [FLAGS.M])
+          # softmax = sess.run(ram.softmax,
+                                # feed_dict={
+                                  # ram.img_ph: images,
+                                  # ram.lbl_ph: labels
+                                # })
+          # softmax = np.reshape(softmax, [FLAGS.M, -1, 2])
+          # softmax = np.mean(softmax, 0)
+          # prediction = np.argmax(softmax, 1).flatten()
+          # correct_cnt += np.sum(prediction == labels_bak)
+          # all_predictions.extend(prediction)
+          # all_labels.extend(labels_bak)
+        
+        # acc = correct_cnt / num_samples
+        # precision = get_precision(all_predictions, all_labels)
+        # recall = get_recall(all_predictions, all_labels)
+        # if dataset == mnist.validation:
+          # logging.info('valid accuracy = {}'.format(acc))
+          # logging.info('valid precision = {}'.format(precision))
+          # logging.info('valid recall = {}'.format(recall))
+        # else:
+          # logging.info('test accuracy = {}'.format(acc))
+          # logging.info('test precision = {}'.format(precision))
+          # logging.info('test recall = {}'.format(recall))
+      # save_path = saver.save(sess, "/tmp/model.ckpt")
+      # print("Model saved in file: %s" % save_path)
