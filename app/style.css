@@ -1,0 +1,29 @@
+#convas {
+    width: 300px;
+    height: 900px;
+    background:#000;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+#drawing {
+    position:absolute;
+    width="300px";
+    height="900px";
+}
+
+
+#image {
+    display: block;
+    width="100%";
+    height="900%";
+    position:absolute; 
+}
+
+rect {
+    fill: none;
+    strokeWidth: 4;
+    stroke: red;
+}
+
+
