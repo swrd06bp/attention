@@ -6,8 +6,12 @@
   <link rel="stylesheet" href="style.css">
 </head>
 
+<div id="prediction-text">
+  Prediction of the model: <span id="prediction-value"></span>
+</div>
+
 <div id="convas">
-  <img id="image" width="300" height="900"\>
+  <img id="image" width="320" height="960"\>
   <div id="drawing"></div>
 </div>
 
@@ -23,17 +27,21 @@
   socket.on('bboxes', function (data) {
     $("#drawing").empty()
     
-    var draw = SVG('drawing').size(300, 900)
+    var draw = SVG('drawing').size(320, 960)
     
     data = JSON.parse(data);  
     
     for (i = 0; i < data.length; i++) {
       // draw rect
       loc = data[i];
-      var rect = draw.rect(85, 85).attr({x:loc[0], y:loc[1]+loc[2]*300});
+      var text = draw.text(i.toString()).attr({x:loc[0]*10, y:loc[1]*10+loc[2]*300-5});;
+      var rect = draw.rect(85, 85).attr({x:loc[0]*10, y:loc[1]*10+loc[2]*300});
     }
   });
 
+  socket.on('prediction', function (data) {
+    $("#prediction-value").html(data); 
+  });
 
 
 </script>

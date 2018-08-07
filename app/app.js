@@ -31,5 +31,16 @@ app.post('/bboxes', function (req, res){
   });
 });
 
+app.post('/prediction', function (req, res){
+  data = ''
+  req.on('data', function (chunk) {
+    data += chunk.toString();
+  });
+  req.on('end', function () {
+    io.emit('prediction', unescape(data));
+    res.sendStatus(200);
+  });
+});
+
 server.listen(8888, '0.0.0.0');
 
