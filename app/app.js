@@ -2,6 +2,7 @@ var express = require('express');
 var app = express();
 var server = require('http').Server(app);
 var io = require('socket.io')(server);
+var bodyParser = require('body-parser')
 
 app.use(express.static(__dirname))
 
@@ -14,8 +15,10 @@ let boxes = '';
 let prediction = '';
 let logging = '';
 let count_logging = 0;
+let rewards = []
 
 app.post('/image', function (req, res){
+
   image = ''
   req.on('data', function (chunk) {
     image += chunk.toString();
@@ -63,11 +66,26 @@ app.post('/logging', function (req, res){
   });
 });
 
+
+app.post('/reward', function (req, res){
+  reward = ''
+  req.on('data', function (chunk) {
+    reward += chunk.toString();
+  });
+  req.on('end', function () {
+    rewards.push(JSON.parse(unescape(reward)));
+    io.emit('reward', unescape(reward));
+    res.sendStatus(200);
+  });
+});
+
+
 io.on('connection', function(socket){
   socket.emit('prediction', prediction);
   socket.emit('bboxes', boxes);
   socket.emit('image', image);
   socket.emit('logging', logging);
+  socket.emit('rewards', rewards);
 });
 
 server.listen(8888, '0.0.0.0');

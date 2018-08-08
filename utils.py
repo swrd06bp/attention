@@ -41,3 +41,6 @@ def render_results(images, locs, labels):
 def add_logging(logs):
     requests.post("http://127.0.0.1:8888/logging", data="{}\n".format(logs))
 
+def add_reward(steps, reward):
+    requests.post("http://127.0.0.1:8888/reward", data="[{}, {}]".format(steps, reward))
+

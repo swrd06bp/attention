@@ -68,6 +68,7 @@ with tf.Session() as sess:
     # print("Model restored.")
 
     for step in xrange(FLAGS.num_steps):
+
         ram.is_training = True
         images, labels = mnist.train.next_batch(FLAGS.batch_size)
         images = np.reshape(images, [-1, 28, 28, 1])
@@ -88,7 +89,7 @@ with tf.Session() as sess:
             text_log = 'step {}: lr = {:3.6f}\tloss = {:3.4f}\txent = {:3.4f}\treward = {:3.4f}\tadvantage = {:3.4f}\tbaselines_mse = {:3.4f}'.format(
                     step, learning_rate, loss, xent, reward, advantage, baselines_mse)
             logging.info(text_log)
-
+            utils.add_reward(step, reward)
             utils.render_results(images, locs, labels)
             utils.add_logging(text_log)
                         # Evaluationif step and step % training_steps_per_epoch ==0:

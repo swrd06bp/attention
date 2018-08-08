@@ -29,6 +29,14 @@
     background:transparent;
 }
 
+#charts {
+    position:absolute;
+    right:0px;
+    width: 700px;
+    height: 700px;
+    top:50px; 
+}
+
 rect {
     fill: none;
     strokeWidth: 4;

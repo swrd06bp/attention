@@ -1,27 +1,44 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.1.1/socket.io.js"></script>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
 <script src="https://rawgit.com/svgdotjs/svg.js/master/dist/svg.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+
 
 <head>
   <link rel="stylesheet" href="style.css">
 </head>
 
-<div id="accuracy-log">
-  <h1>Accuracy logs</h1>
-  <textarea id="accuracy-log-text" rows="50" cols="110">
-  </textarea>
+<div class="container">
+ <div class="row">
+  <div class="col-md">
+    <div id="accuracy-log">
+      <h1>Accuracy logs</h1>
+      <textarea id="accuracy-log-text" rows="50" cols="110" disabled>
+      </textarea>
+    </div>
+  </div>
+
+  <div class="col-md">
+    <div id="prediction-text">
+      Prediction of the model: <span id="prediction-value"></span>
+    </div>
+
+    <div id="convas">
+      <img id="image" width="320" height="960"\>
+      <div id="drawing"></div>
+    </div>
+  </div>
+ 
+  <div class="col-md">
+    <div id="charts">
+      <h1>&emsp;&emsp;&emsp;Reward function</h1>
+      <div id="chart_reward"></div>
+    </div>
+  </div> 
+
+ </div>
 </div>
-
-<div id="prediction-text">
-  Prediction of the model: <span id="prediction-value"></span>
-</div>
-
-
-<div id="convas">
-  <img id="image" width="320" height="960"\>
-  <div id="drawing"></div>
-</div>
-
 
 <script>
   var socket = io('http://35.195.240.245:8888');
@@ -56,4 +73,46 @@
   socket.on('logging', function (data) {
     $("#accuracy-log-text").val(data);
   });
+
+
+  google.charts.load('current', {packages: ['corechart', 'line']});
+  google.charts.setOnLoadCallback(drawBasic);
+ 
+ 
+  function drawBasic() {
+
+      var data = new google.visualization.DataTable();
+      data.addColumn('number', 'X');
+      data.addColumn('number', 'Reward');
+
+      data.addRows([]);
+
+      var options = {
+        hAxis: {
+          title: 'Steps'
+        },
+        vAxis: {
+          title: 'Reward'
+        },
+        animation:{
+          duration: 1000,
+          easing: 'out',
+        },
+      };
+
+      var chart = new google.visualization.LineChart(document.getElementById('chart_reward'));
+
+      chart.draw(data, options);
+      var socket = io('http://35.195.240.245:8888'); 
+      socket.on('reward', function (d) {
+          data.addRow(JSON.parse(d));
+          chart.draw(data, options);
+      });
+      
+      socket.on('rewards', function (d) {
+          data.addRows(d);
+          chart.draw(data, options);
+      });
+
+  }
 </script>
