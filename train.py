@@ -2,7 +2,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import requests
 import tensorflow as tf
 from copy import deepcopy
 from tensorflow.examples.tutorials.mnist import input_data
@@ -86,14 +85,12 @@ with tf.Session() as sess:
                 ram.lbl_ph: labels,
                 })
         if step and step % 100 == 0:
-            logging.info(
-                'step {}: lr = {:3.6f}\tloss = {:3.4f}\txent = {:3.4f}\treward = {:3.4f}\tadvantage = {:3.4f}\tbaselines_mse = {:3.4f}'.format(
-                    step, learning_rate, loss, xent, reward, advantage, baselines_mse))
-            locs_first_image  = np.array([loc[0, :] for loc in locs])
-            requests.post("http://127.0.0.1:8888/bboxes", data=str(utils.transform_locs_to_bboxes(locs_first_image, (8,8), (32, 32), 3)))
-            requests.post("http://127.0.0.1:8888/image", data=utils.transform_images(images[0]))
-            requests.post("http://127.0.0.1:8888/prediction", data=str(labels[0]))
+            text_log = 'step {}: lr = {:3.6f}\tloss = {:3.4f}\txent = {:3.4f}\treward = {:3.4f}\tadvantage = {:3.4f}\tbaselines_mse = {:3.4f}'.format(
+                    step, learning_rate, loss, xent, reward, advantage, baselines_mse)
+            logging.info(text_log)
 
+            utils.render_results(images, locs, labels)
+            utils.add_logging(text_log)
                         # Evaluationif step and step % training_steps_per_epoch ==0:
         if step and step % training_steps_per_epoch ==0:
             
@@ -116,15 +113,21 @@ with tf.Session() as sess:
                               ram.img_ph: images,
                               ram.lbl_ph: labels
                               })
+                    
                     softmax = np.reshape(softmax, [FLAGS.M, -1, 10])
                     softmax = np.mean(softmax, 0)
                     prediction = np.argmax(softmax, 1).flatten()
                     correct_cnt += np.sum(prediction == labels_bak)
                 acc = correct_cnt / num_samples
+                
+                utils.render_results(images, locs, labels)
+
                 if dataset == mnist.validation:
                     logging.info('valid accuracy = {}'.format(acc))
                 else:
                     logging.info('test accuracy = {}'.format(acc))
+                    utils.add_logging('test accuracy {}'.format(acc))
+    utils.add_logging("JOB DONE")
 
 # requests.post("http://127.0.0.1:8888/image", data=base64.b64encode(open('test.jpg', 'rb').read()))
 

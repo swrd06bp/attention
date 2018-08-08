@@ -6,14 +6,22 @@
   <link rel="stylesheet" href="style.css">
 </head>
 
+<div id="accuracy-log">
+  <h1>Accuracy logs</h1>
+  <textarea id="accuracy-log-text" rows="50" cols="110">
+  </textarea>
+</div>
+
 <div id="prediction-text">
   Prediction of the model: <span id="prediction-value"></span>
 </div>
+
 
 <div id="convas">
   <img id="image" width="320" height="960"\>
   <div id="drawing"></div>
 </div>
+
 
 <script>
   var socket = io('http://35.195.240.245:8888');
@@ -39,9 +47,13 @@
     }
   });
 
+  // get the prediction
   socket.on('prediction', function (data) {
     $("#prediction-value").html(data); 
   });
 
-
+  // get the logs
+  socket.on('logging', function (data) {
+    $("#accuracy-log-text").val(data);
+  });
 </script>
