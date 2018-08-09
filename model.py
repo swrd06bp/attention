@@ -3,14 +3,6 @@ from tensorflow.python.ops.rnn_cell_impl import BasicLSTMCell
 from tensorflow.contrib.legacy_seq2seq.python.ops.seq2seq import rnn_decoder
 from tensorflow.python.ops.distributions.normal import Normal
 
-def focal_loss(logits, labels, gamma=2.0, epsilon=1e-4):
-    one_hot = tf.one_hot(labels, depth=2)
-    prob = tf.nn.softmax(logits)
-
-    focal_loss_tensor = -tf.pow(1.0-prob, gamma)*tf.log(prob+epsilon)
-    focal_loss = tf.reduce_sum([0.1, 0.9]*tf.reduce_mean(focal_loss_tensor*one_hot, axis=0))
-
-    return focal_loss
 
 def _weight_variable(shape):
     initial = tf.truncated_normal(shape=shape, stddev=0.01)
@@ -52,7 +44,7 @@ class RetinaSensor(object):
         nb_loc = tf.one_hot(nb_loc, 3)
         nb_loc = tf.expand_dims(nb_loc, 1)  
         nb_loc = tf.expand_dims(nb_loc, 1)  
-        nb_loc = tf.tile(nb_loc, [1, 28, 28, 1])
+        nb_loc = tf.tile(nb_loc, [1, 240, 320, 1])
         img_ph = tf.multiply(img_ph, nb_loc)
         img_ph = tf.reduce_sum(img_ph, -1)
 

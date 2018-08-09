@@ -72,11 +72,17 @@ def apply_masks(images, masks):
 
 def get_data():
     df = pd.read_csv(open(os.path.join(DATA_FOLDER, 'alarms.csv')), delimiter='--')
-    # import ipdb; ipdb.set_trace() # BREAKPOINT
     while True:
+        df = df.sample(frac=1).reset_index(drop=True)
         for i, key in enumerate(df['s3key']):
-            print(key)
             msg = email.message_from_file(open(os.path.join(DATA_FOLDER, key)))
             images = extract_images_from_email_attachment(msg)
             images = apply_masks(images, df['masks'][i])
-            yield images, df['ground_truth'][i]
+            images = np.expand_dims(images, -1)
+            images_temp = np.concatenate((images[0, :, :], images[1, :, :]), axis=2)
+            images = np.concatenate((images_temp, images[2, :, :]), axis=2)
+            images = np.expand_dims(images, 0)
+            images = images.astype(float)
+            images /= 255
+            labels = np.array([int(df['ground_truth'][i])])
+            yield images, labels
