@@ -103,3 +103,5 @@ ENV/
 data_management
 .*.swp
 app/node_modules
+MNIST_data
+app/test.jpg
