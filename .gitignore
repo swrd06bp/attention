@@ -101,3 +101,5 @@ ENV/
 # mypy
 .mypy_cache/
 data_management
+.*.swp
+app/node_modules
