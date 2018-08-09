@@ -16,6 +16,17 @@ let prediction = '';
 let logging = '';
 let count_logging = 0;
 let rewards = []
+let accuracies = []
+
+app.get('/reset', function (req, res){
+  image = '';
+  boxes = '';
+  prediction = '';
+  logging = '';
+  count_logging = 0;
+  rewards = []
+  accuracies = []
+});
 
 app.post('/image', function (req, res){
 
@@ -35,7 +46,7 @@ app.post('/bboxes', function (req, res){
     boxes += chunk.toString();
   });
   req.on('end', function () {
-    io.emit('bboxes', unescape(boxes));
+    io.emit('bboxes', JSON.parse(unescape(boxes)));
     res.sendStatus(200);
   });
 });
@@ -46,7 +57,7 @@ app.post('/prediction', function (req, res){
     prediction += chunk.toString();
   });
   req.on('end', function () {
-    io.emit('prediction', unescape(prediction));
+    io.emit('prediction', JSON.parse(unescape(prediction)));
     res.sendStatus(200);
   });
 });
@@ -74,11 +85,22 @@ app.post('/reward', function (req, res){
   });
   req.on('end', function () {
     rewards.push(JSON.parse(unescape(reward)));
-    io.emit('reward', unescape(reward));
+    io.emit('reward', JSON.parse(unescape(reward)));
     res.sendStatus(200);
   });
 });
 
+app.post('/accuracy', function (req, res){
+  accuracy = ''
+  req.on('data', function (chunk) {
+    accuracy += chunk.toString();
+  });
+  req.on('end', function () {
+    accuracies.push(JSON.parse(unescape(accuracy)));
+    io.emit('accuracy', JSON.parse(unescape(accuracy)));
+    res.sendStatus(200);
+  });
+});
 
 io.on('connection', function(socket){
   socket.emit('prediction', prediction);
@@ -86,6 +108,7 @@ io.on('connection', function(socket){
   socket.emit('image', image);
   socket.emit('logging', logging);
   socket.emit('rewards', rewards);
+  socket.emit('accuracies', accuracies);
 });
 
 server.listen(8888, '0.0.0.0');

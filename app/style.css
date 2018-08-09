@@ -4,8 +4,9 @@
 
 #convas {
     width: 320px;
-    height: 960px;
+    height: 720px;
     background:#000;
+    top=30px;
     margin-left: auto;
     margin-right: auto;
 }
@@ -13,19 +14,19 @@
 #drawing {
     position:absolute;
     width="320px";
-    height="960px";
+    height="720px";
 }
 
 #image {
     display: block;
     width="100%";
-    height="960%";
+    height="100%";
     position:absolute; 
 }
 
 #accuracy-log {
     position:absolute;
-    top: 50px;
+    top: 30px;
     background:transparent;
 }
 

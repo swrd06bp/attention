@@ -22,18 +22,22 @@
   <div class="col-md">
     <div id="prediction-text">
       Prediction of the model: <span id="prediction-value"></span>
+      <br/>
+      Ground truth: <span id="ground-truth-value"></span>
     </div>
 
     <div id="convas">
-      <img id="image" width="320" height="960"\>
+      <img id="image" width="320" height="720"\>
       <div id="drawing"></div>
     </div>
   </div>
  
   <div class="col-md">
     <div id="charts">
-      <h1>&emsp;&emsp;&emsp;Reward function</h1>
+      <h1>&emsp;&emsp;&emsp;Reward</h1>
       <div id="chart_reward"></div>
+      <h1>&emsp;&emsp;&emsp;Accuracy</h1>
+      <div id="chart_accuracy"></div>
     </div>
   </div> 
 
@@ -42,6 +46,11 @@
 
 <script>
   var socket = io('http://35.195.240.245:8888');
+
+  // get the logs
+  socket.on('logging', function (data) {
+    $("#accuracy-log-text").val(data);
+  });
 
   // load the image
   socket.on('image', function (data) {
@@ -52,34 +61,31 @@
   socket.on('bboxes', function (data) {
     $("#drawing").empty()
     
-    var draw = SVG('drawing').size(320, 960)
-    
-    data = JSON.parse(data);  
+    var draw = SVG('drawing').size(320, 720);
     
     for (i = 0; i < data.length; i++) {
       // draw rect
       loc = data[i];
-      var text = draw.text(i.toString()).attr({x:loc[0]*10, y:loc[1]*10+loc[2]*300-5});;
-      var rect = draw.rect(85, 85).attr({x:loc[0]*10, y:loc[1]*10+loc[2]*300});
+      var text = draw.text(i.toString()).attr({x:loc[0]*10, y:loc[1]*10+loc[2]*240-5});;
+      var rect = draw.rect(32, 32).attr({x:loc[0]*10, y:loc[1]*10+loc[2]*240});
     }
   });
 
   // get the prediction
   socket.on('prediction', function (data) {
-    $("#prediction-value").html(data); 
+    $("#prediction-value").html(data[0]); 
+    $("#ground-truth-value").html(data[1]); 
   });
 
-  // get the logs
-  socket.on('logging', function (data) {
-    $("#accuracy-log-text").val(data);
-  });
 
 
   google.charts.load('current', {packages: ['corechart', 'line']});
-  google.charts.setOnLoadCallback(drawBasic);
+  google.charts.setOnLoadCallback(drawReward);
  
+  google.charts.load('current', {packages: ['corechart', 'line']});
+  google.charts.setOnLoadCallback(drawAccuracy);
  
-  function drawBasic() {
+  function drawReward() {
 
       var data = new google.visualization.DataTable();
       data.addColumn('number', 'X');
@@ -98,6 +104,13 @@
           duration: 1000,
           easing: 'out',
         },
+        explorer: { 
+          actions: ['dragToZoom', 'rightClickToReset'],
+          axis: 'horizontal',
+          keepInBounds: true,
+          maxZoomIn: 4.0
+        },
+        legend: { position: 'bottom'  },
       };
 
       var chart = new google.visualization.LineChart(document.getElementById('chart_reward'));
@@ -105,7 +118,7 @@
       chart.draw(data, options);
       var socket = io('http://35.195.240.245:8888'); 
       socket.on('reward', function (d) {
-          data.addRow(JSON.parse(d));
+          data.addRow(d);
           chart.draw(data, options);
       });
       
@@ -113,6 +126,50 @@
           data.addRows(d);
           chart.draw(data, options);
       });
+    }
+  
+  function drawAccuracy() {
 
-  }
+      var data = new google.visualization.DataTable();
+      data.addColumn('number', 'X');
+      data.addColumn('number', 'Reduction');
+      data.addColumn('number', 'Recall');
+      data.addColumn('number', 'Accuracy');
+
+      data.addRows([]);
+
+      var options = {
+        hAxis: {
+          title: 'Epochs'
+        },
+        vAxis: {
+          title: 'Accuracy'
+        },
+        animation:{
+          duration: 1000,
+          easing: 'out',
+        },
+        explorer: { 
+          actions: ['dragToZoom', 'rightClickToReset'],
+          axis: 'horizontal',
+          keepInBounds: true,
+          maxZoomIn: 4.0
+        },
+        legend: { position: 'bottom'  },
+      };
+
+      var chart = new google.visualization.LineChart(document.getElementById('chart_accuracy'));
+
+      chart.draw(data, options);
+      var socket = io('http://35.195.240.245:8888'); 
+      socket.on('accuracy', function (d) {
+          data.addRow(d);
+          chart.draw(data, options);
+      });
+      
+      socket.on('accuracies', function (d) {
+          data.addRows(d);
+          chart.draw(data, options);
+      });
+    }
 </script>
