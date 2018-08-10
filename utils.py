@@ -1,8 +1,10 @@
-import png
+import json
 import base64
+
 from requests_futures.sessions import FuturesSession
 import numpy as np
 from PIL import Image
+
 
 session = FuturesSession()
 
@@ -35,18 +37,18 @@ def transform_locs_to_bboxes(loc, focal_shape, image_shape, number_images):
 
 def render_results(images, locs, predictions, labels):
     locs_first_image  = np.array([loc[0, :] for loc in locs])
-    session.post("http://127.0.0.1:8888/bboxes", data=str(transform_locs_to_bboxes(locs_first_image, (8,8), (32, 32), 3)))
+    session.post("http://127.0.0.1:8888/bboxes", json=transform_locs_to_bboxes(locs_first_image, (8,8), (32, 32), 3))
     session.post("http://127.0.0.1:8888/image", data=transform_images(images[0]))
-    session.post("http://127.0.0.1:8888/prediction", data=str([predictions[0], labels[0]]))
+    session.post("http://127.0.0.1:8888/prediction", json=[predictions[0], labels[0]])
 
 def add_logging(logs):
     session.post("http://127.0.0.1:8888/logging", data="{}\n".format(logs))
 
 def add_reward(steps, reward):
-    session.post("http://127.0.0.1:8888/reward", data="[{}, {}]".format(steps, reward))
+    session.post("http://127.0.0.1:8888/reward", json=[steps, reward])
 
 def add_accuracy(epoch, reduction, recall, accuracy):
-    session.post("http://127.0.0.1:8888/accuracy", data="[{}, {}, {}, {}]".format(epoch, reduction, recall, accuracy))
+    session.post("http://127.0.0.1:8888/accuracy", json=[epoch, reduction, recall, accuracy])
 
 def reset():
     session.get("http://127.0.0.1:8888/reset")

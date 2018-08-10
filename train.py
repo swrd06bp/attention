@@ -64,7 +64,7 @@ def train():
     baselines_mses = 0
     losses = 0
     xents = 0
-    epochs = -1
+    epochs = 0
     number_examples = 600
     
     utils.reset()

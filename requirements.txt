@@ -1,1 +1,7 @@
-tensorflow
+numpy
+pandas
+Pillow
+ipdb
+tensorflow-gpu
+opencv-python
+requests-futures

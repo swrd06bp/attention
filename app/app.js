@@ -2,9 +2,11 @@ var express = require('express');
 var app = express();
 var server = require('http').Server(app);
 var io = require('socket.io')(server);
-var bodyParser = require('body-parser')
+var bodyParser = require('body-parser');
 
 app.use(express.static(__dirname))
+app.use(bodyParser.urlencoded({ extended: false  }));
+app.use(bodyParser.json())
 
 app.get('/', function (req, res) {
   res.sendFile(__dirname + '/index.html'); 
@@ -18,15 +20,6 @@ let count_logging = 0;
 let rewards = []
 let accuracies = []
 
-app.get('/reset', function (req, res){
-  image = '';
-  boxes = '';
-  prediction = '';
-  logging = '';
-  count_logging = 0;
-  rewards = []
-  accuracies = []
-});
 
 app.post('/image', function (req, res){
 
@@ -41,25 +34,13 @@ app.post('/image', function (req, res){
 });
 
 app.post('/bboxes', function (req, res){
-  boxes = ''
-  req.on('data', function (chunk) {
-    boxes += chunk.toString();
-  });
-  req.on('end', function () {
-    io.emit('bboxes', JSON.parse(unescape(boxes)));
-    res.sendStatus(200);
-  });
+  io.emit('bboxes', req.body);
+  res.sendStatus(200);
 });
 
 app.post('/prediction', function (req, res){
-  prediction = ''
-  req.on('data', function (chunk) {
-    prediction += chunk.toString();
-  });
-  req.on('end', function () {
-    io.emit('prediction', JSON.parse(unescape(prediction)));
-    res.sendStatus(200);
-  });
+  io.emit('prediction', req.body);
+  res.sendStatus(200);
 });
 
 app.post('/logging', function (req, res){
@@ -79,27 +60,15 @@ app.post('/logging', function (req, res){
 
 
 app.post('/reward', function (req, res){
-  reward = ''
-  req.on('data', function (chunk) {
-    reward += chunk.toString();
-  });
-  req.on('end', function () {
-    rewards.push(JSON.parse(unescape(reward)));
-    io.emit('reward', JSON.parse(unescape(reward)));
-    res.sendStatus(200);
-  });
+  rewards.push(req.body);
+  io.emit('reward', req.body);
+  res.sendStatus(200);
 });
 
 app.post('/accuracy', function (req, res){
-  accuracy = ''
-  req.on('data', function (chunk) {
-    accuracy += chunk.toString();
-  });
-  req.on('end', function () {
-    accuracies.push(JSON.parse(unescape(accuracy)));
-    io.emit('accuracy', JSON.parse(unescape(accuracy)));
-    res.sendStatus(200);
-  });
+  accuracies.push(req.body);
+  io.emit('accuracy', req.body);
+  res.sendStatus(200);
 });
 
 io.on('connection', function(socket){
