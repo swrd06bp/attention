@@ -1,6 +1,6 @@
 import logging
 
-import utils
+from helpers import utils
 
 logging.getLogger().setLevel(logging.INFO)
 

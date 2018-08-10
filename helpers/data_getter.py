@@ -69,6 +69,11 @@ def apply_masks(images, masks):
     return np.array([np.multiply(mask, image) for image in images])
 
 
+def get_number_examples(dataset="train"):
+    df = pd.read_csv(open(os.path.join(DATA_FOLDER, 'alarms_{}.csv'.format(dataset))), delimiter='--')
+    return df.shape[0]
+
+
 
 def get_data(dataset="train"):
     df = pd.read_csv(open(os.path.join(DATA_FOLDER, 'alarms_{}.csv'.format(dataset))), delimiter='--')

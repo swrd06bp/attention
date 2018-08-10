@@ -1,15 +1,15 @@
 import numpy as np
 
-import utils
-import metrics
-from get_data import get_data
+from helpers import utils
+from helpers import metrics
+from helpers import data_getter
 
 
 class Tester(object):
     def __init__(self, sess, ram):
         self.ram = ram
         self.sess = sess
-        self.number_examples = 600
+        self.number_examples = data_getter.get_number_examples("train")
     
 
     def evaluate_model(self):
@@ -18,7 +18,7 @@ class Tester(object):
         all_predictions = []
         all_labels = []
 
-        for steps, data in enumerate(get_data()):
+        for steps, data in enumerate(data_getter.get_data("train")):
             images, labels = data
             
             predictions, locs = self.sess.run(

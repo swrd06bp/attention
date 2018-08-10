@@ -5,10 +5,10 @@ from __future__ import print_function
 import tensorflow as tf
 import numpy as np
 
-import utils
-import log_activity
 from test import Tester
-from get_data import get_data
+from helpers import data_getter
+from helpers import utils
+from helpers import log_activity
 from model import RecurrentAttentionModel
 
 
@@ -65,7 +65,7 @@ def train():
     losses = 0
     xents = 0
     epochs = 0
-    number_examples = 600
+    number_examples = data_getter.get_number_examples("train")
     
     utils.reset()
 
@@ -75,7 +75,7 @@ def train():
         # saver.restore(sess, "/tmp/model.ckpt")
         # print("Model restored.")
 
-        for step, data in enumerate(get_data()):
+        for step, data in enumerate(data_getter.get_data("train")):
             
             ram.is_training = True
             images, labels = data
