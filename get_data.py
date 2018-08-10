@@ -70,12 +70,12 @@ def apply_masks(images, masks):
 
 
 
-def get_data():
-    df = pd.read_csv(open(os.path.join(DATA_FOLDER, 'alarms.csv')), delimiter='--')
+def get_data(dataset="train"):
+    df = pd.read_csv(open(os.path.join(DATA_FOLDER, 'alarms_{}.csv'.format(dataset))), delimiter='--')
     while True:
         df = df.sample(frac=1).reset_index(drop=True)
         for i, key in enumerate(df['s3key']):
-            msg = email.message_from_file(open(os.path.join(DATA_FOLDER, key)))
+            msg = email.message_from_file(open(os.path.join(DATA_FOLDER, dataset, key)))
             images = extract_images_from_email_attachment(msg)
             images = apply_masks(images, df['masks'][i])
             images = np.expand_dims(images, -1)
