@@ -2,7 +2,7 @@ import numpy as np
 
 from helpers import utils
 from helpers import metrics
-from helpers import data_getter
+from data_management import data_getter
 
 
 class Tester(object):

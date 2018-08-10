@@ -6,9 +6,9 @@ import tensorflow as tf
 import numpy as np
 
 from test import Tester
-from helpers import data_getter
 from helpers import utils
 from helpers import log_activity
+from data_management import data_getter
 from model import RecurrentAttentionModel
 
 
