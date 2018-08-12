@@ -1,15 +1,23 @@
-var express = require('express');
-var app = express();
-var server = require('http').Server(app);
-var io = require('socket.io')(server);
-var bodyParser = require('body-parser');
+const express = require('express');
+const app = express();
+const server = require('http').Server(app);
+const io = require('socket.io')(server);
+const bodyParser = require('body-parser');
+const publicIp = require('public-ip');
+
+const args = process.argv;
+const port = args[2];
 
 app.use(express.static(__dirname))
 app.use(bodyParser.urlencoded({ extended: false  }));
 app.use(bodyParser.json())
+app.set('view engine', 'ejs');
 
 app.get('/', function (req, res) {
-  res.sendFile(__dirname + '/index.html'); 
+  publicIp.v4().then(ip => {
+    console.log("Connection on http://" + ip + ":" + port)
+    res.render(__dirname + '/index.ejs', {ip:ip, port:port}); 
+  });
 });
 
 let image = '';
@@ -20,6 +28,16 @@ let count_logging = 0;
 let rewards = []
 let accuracies = []
 
+app.get('/reset', function (req, res) {
+  image = '';
+  boxes = '';
+  prediction = '';
+  logging = '';
+  count_logging = 0;
+  rewards = []
+  accuracies = []
+  res.sendStatus(200);
+});
 
 app.post('/image', function (req, res){
 
@@ -80,5 +98,5 @@ io.on('connection', function(socket){
   socket.emit('accuracies', accuracies);
 });
 
-server.listen(8888, '0.0.0.0');
+server.listen(parseInt(port), '0.0.0.0');
 
