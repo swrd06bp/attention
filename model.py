@@ -27,45 +27,61 @@ class RetinaSensor(object):
         self.pth_size = pth_size
 
     def __call__(self, img_ph, loc):
-        # change loc[:, 2] to be between 0 and 2
-        # ex nb_loc = 1.2
+        # # change loc[:, 2] to be between 0 and 2
+        # # ex nb_loc = 1.2
         nb_loc =  tf.add(loc[:, 2], 1)
-        # change nb_loc to be between 0 and 2*img_ph.shape[-1]
-        # ex if img_ph.shape[-1] = 3, nb_loc = 3.6
+        # # change nb_loc to be between 0 and 2*img_ph.shape[-1]
+        # # ex if img_ph.shape[-1] = 3, nb_loc = 3.6
         nb_loc = tf.multiply(tf.cast(img_ph.shape[-1], tf.float32), nb_loc)
-        # change nb_loc to be between 0 and img_ph.shape[-1]
-        # ex: nb_loc = 1.8
-        # change nb_loc to be an int which could be either
-        # 0, 1, .. , img_ph.shape[-1] - 1
-        # ex: nb_loc = 1
+        # # change nb_loc to be between 0 and img_ph.shape[-1]
+        # # ex: nb_loc = 1.8
+        # # change nb_loc to be an int which could be either
+        # # 0, 1, .. , img_ph.shape[-1] - 1
+        # # ex: nb_loc = 1
         nb_loc = tf.cast(tf.divide(nb_loc, 2), tf.uint8)
-        # change nb_loc to be on hot with a depth of 1
-        # ex nb_loc = [0, 1, 0]
+        # # change nb_loc to be on hot with a depth of 1
+        # # ex nb_loc = [0, 1, 0]
         nb_loc = tf.one_hot(nb_loc, 3)
         nb_loc = tf.expand_dims(nb_loc, 1)  
         nb_loc = tf.expand_dims(nb_loc, 1)  
-        nb_loc = tf.tile(nb_loc, [1, 240, 320, 1])
-        img_ph = tf.multiply(img_ph, nb_loc)
-        img_ph = tf.reduce_sum(img_ph, -1)
+        nb_loc = tf.expand_dims(nb_loc, 1)  
+        nb_loc = tf.tile(nb_loc, [1, self.pth_size, self.pth_size, 3, 1])
+        # img_ph = tf.multiply(img_ph, nb_loc)
+        # img_ph = tf.reduce_sum(img_ph, -1)
 
         img = tf.reshape(img_ph, [
           tf.shape(img_ph)[0],
           self.img_size[0],
           self.img_size[1],
-          1
+          3
         ])
-        pth = tf.image.extract_glimpse(
-                img,
-                [self.pth_size, self.pth_size],
-                loc[:, :2])
-        return tf.reshape(pth, [tf.shape(loc)[0], self.pth_size*self.pth_size])
+    
+        pths = []
+        for i in [1, 2, 4]:
+            pth = tf.image.extract_glimpse(
+                    img,
+                    [int(self.pth_size), int(self.pth_size)],
+                    loc[:, :2])
+            pth = tf.image.resize_images(
+                    pth,
+                    [self.pth_size, self.pth_size]
+                    )
+            pth = tf.expand_dims(pth, -1)
+            pths.append(pth)
+
+        pth = tf.concat((pths[0], pths[1]), axis=4)
+        pth = tf.concat((pth, pths[2]), axis=4)
+        pth = tf.multiply(pth, nb_loc)
+        pth = tf.reduce_sum(pth, -1)
+
+        return tf.reshape(pth, [tf.shape(loc)[0], 3*self.pth_size*self.pth_size])
 
 class GlimpseNetwork(object):
     def __init__(self, img_size, pth_size, loc_dim, g_size, l_size, output_size):
         self.retina_sensor = RetinaSensor(img_size, pth_size)
 
         # layer 1
-        self.g1_w = _weight_variable((pth_size*pth_size, g_size))
+        self.g1_w = _weight_variable((3*pth_size*pth_size, g_size))
         self.g1_b = _bias_variable((g_size,))
         self.l1_w = _weight_variable((loc_dim, l_size))
         self.l1_b = _bias_variable((l_size,))

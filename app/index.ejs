@@ -68,8 +68,14 @@
     for (i = 0; i < data.length; i++) {
       // draw rect
       loc = data[i];
-      var text = draw.text(i.toString()).attr({x:loc[0]*10, y:loc[1]*10+loc[2]*240-5});;
-      var rect = draw.rect(32, 32).attr({x:loc[0]*10, y:loc[1]*10+loc[2]*240});
+      size_mul = {"0": 32, "1": 64, "2":128};
+      size = size_mul[loc[2].toString()];
+      var text = draw.text(i.toString()).attr({x:loc[0]*10, y:loc[1]*10});;
+      var rect = draw.rect(size, size).attr({x:loc[0]*10, y:loc[1]*10});
+      var text = draw.text(i.toString()).attr({x:loc[0]*10, y:loc[1]*10 + 240});;
+      var rect = draw.rect(size, size).attr({x:loc[0]*10, y:loc[1]*10 + 240});
+      var text = draw.text(i.toString()).attr({x:loc[0]*10, y:loc[1]*10 + 480});;
+      var rect = draw.rect(size, size).attr({x:loc[0]*10, y:loc[1]*10 + 480});
     }
   });
 
