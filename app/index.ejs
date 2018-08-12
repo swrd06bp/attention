@@ -1,0 +1,177 @@
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.1.1/socket.io.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="https://rawgit.com/svgdotjs/svg.js/master/dist/svg.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+
+
+<head>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<div class="container">
+ <div class="row">
+  <div class="col-md">
+    <div id="accuracy-log">
+      <h1>Accuracy logs</h1>
+      <textarea id="accuracy-log-text" rows="50" cols="110" disabled>
+      </textarea>
+    </div>
+  </div>
+
+  <div class="col-md">
+    <div id="prediction-text">
+      Prediction of the model: <span id="prediction-value"></span>
+      <br/>
+      Ground truth: <span id="ground-truth-value"></span>
+    </div>
+
+    <div id="convas">
+      <img id="image" width="320" height="720"\>
+      <div id="drawing"></div>
+    </div>
+  </div>
+ 
+  <div class="col-md">
+    <div id="charts">
+      <h1>&emsp;&emsp;&emsp;Reward</h1>
+      <div id="chart_reward"></div>
+      <h1>&emsp;&emsp;&emsp;Accuracy</h1>
+      <div id="chart_accuracy"></div>
+    </div>
+  </div> 
+
+ </div>
+</div>
+<script>
+  var port = "<%= port %>";
+  var ip = "<%= ip%>";
+  
+  var socket = io('http://'+ ip + ':' + port);
+
+  // get the logs
+  socket.on('logging', function (data) {
+    $("#accuracy-log-text").val(data);
+  });
+
+  // load the image
+  socket.on('image', function (data) {
+    $('#image').attr("src", "data:image/png;base64," + data);
+  });
+
+  //load the bounding boxes
+  socket.on('bboxes', function (data) {
+    $("#drawing").empty()
+    
+    var draw = SVG('drawing').size(320, 720);
+    
+    for (i = 0; i < data.length; i++) {
+      // draw rect
+      loc = data[i];
+      var text = draw.text(i.toString()).attr({x:loc[0]*10, y:loc[1]*10+loc[2]*240-5});;
+      var rect = draw.rect(32, 32).attr({x:loc[0]*10, y:loc[1]*10+loc[2]*240});
+    }
+  });
+
+  // get the prediction
+  socket.on('prediction', function (data) {
+    $("#prediction-value").html(data[0]); 
+    $("#ground-truth-value").html(data[1]); 
+  });
+
+
+
+  google.charts.load('current', {packages: ['corechart', 'line']});
+  google.charts.setOnLoadCallback(drawReward);
+ 
+  google.charts.load('current', {packages: ['corechart', 'line']});
+  google.charts.setOnLoadCallback(drawAccuracy);
+ 
+  function drawReward() {
+
+      var data = new google.visualization.DataTable();
+      data.addColumn('number', 'X');
+      data.addColumn('number', 'Reward');
+
+      data.addRows([]);
+
+      var options = {
+        hAxis: {
+          title: 'Steps'
+        },
+        vAxis: {
+          title: 'Reward'
+        },
+        animation:{
+          duration: 1000,
+          easing: 'out',
+        },
+        explorer: { 
+          actions: ['dragToZoom', 'rightClickToReset'],
+          axis: 'horizontal',
+          keepInBounds: true,
+          maxZoomIn: 4.0
+        },
+        legend: { position: 'bottom'  },
+      };
+
+      var chart = new google.visualization.LineChart(document.getElementById('chart_reward'));
+
+      chart.draw(data, options);
+      var socket = io('http://'+ ip + ':' + port);
+      socket.on('reward', function (d) {
+          data.addRow(d);
+          chart.draw(data, options);
+      });
+      
+      socket.on('rewards', function (d) {
+          data.addRows(d);
+          chart.draw(data, options);
+      });
+    }
+  
+  function drawAccuracy() {
+
+      var data = new google.visualization.DataTable();
+      data.addColumn('number', 'X');
+      data.addColumn('number', 'Reduction');
+      data.addColumn('number', 'Recall');
+      data.addColumn('number', 'Accuracy');
+
+      data.addRows([]);
+
+      var options = {
+        hAxis: {
+          title: 'Epochs'
+        },
+        vAxis: {
+          title: 'Accuracy'
+        },
+        animation:{
+          duration: 1000,
+          easing: 'out',
+        },
+        explorer: { 
+          actions: ['dragToZoom', 'rightClickToReset'],
+          axis: 'horizontal',
+          keepInBounds: true,
+          maxZoomIn: 4.0
+        },
+        legend: { position: 'bottom'  },
+      };
+
+      var chart = new google.visualization.LineChart(document.getElementById('chart_accuracy'));
+
+      chart.draw(data, options);
+      var socket = io('http://'+ ip + ':' + port);
+      socket.on('accuracy', function (d) {
+          data.addRow(d);
+          chart.draw(data, options);
+      });
+      
+      socket.on('accuracies', function (d) {
+          data.addRows(d);
+          chart.draw(data, options);
+      });
+    }
+</script>
