@@ -78,14 +78,17 @@ def get_data(dataset="train"):
     while True:
         df = df.sample(frac=1).reset_index(drop=True)
         for i, key in enumerate(df['s3key']):
-            msg = email.message_from_file(open(os.path.join(DATA_FOLDER, dataset, key)))
-            images = extract_images_from_email_attachment(msg)
-            images = apply_masks(images, df['masks'][i])
-            images = np.expand_dims(images, -1)
-            images_temp = np.concatenate((images[0, :, :], images[1, :, :]), axis=2)
-            images = np.concatenate((images_temp, images[2, :, :]), axis=2)
-            images = np.expand_dims(images, 0)
-            images = images.astype(float)
-            images /= 255
+            try:
+                msg = email.message_from_file(open(os.path.join(DATA_FOLDER, dataset, key)))
+                images = extract_images_from_email_attachment(msg)
+                images = apply_masks(images, df['masks'][i])
+                images = np.expand_dims(images, -1)
+                images_temp = np.concatenate((images[0, :, :], images[1, :, :]), axis=2)
+                images = np.concatenate((images_temp, images[2, :, :]), axis=2)
+                images = np.expand_dims(images, 0)
+                images = images.astype(float)
+                images /= 255
+            except:
+                continue
             labels = np.array([int(df['ground_truth'][i])])
             yield images, labels

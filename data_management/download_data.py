@@ -29,32 +29,30 @@ def modify_data(dataset="train"):
     df = pd.read_csv(open(os.path.join(DATA_FOLDER, 'alarms_{}.csv'.format(dataset))), delimiter='--')
     
     for i, key in enumerate(df['s3key']):
-        if i > 300:
-            print("Modifying email: {}".format(key))
-            msg = email.message_from_file(open(os.path.join(DATA_FOLDER, dataset, key)))
-            images = data_getter.extract_images_from_email_attachment(msg, transform=False)
-            images = apply_bgs_images(images)
-            msg.set_payload([])
-            for name, image in enumerate(images):
-                full_name = "{}.jpg".format(name)
-                img_str = cv2.imencode(full_name, image)[1].tostring()
-                img = MIMEImage(img_str)
-                img.add_header('Content-Disposition', 'attachment', filename=full_name)
-                msg.attach(img)
-            generator = Generator(open(os.path.join(DATA_FOLDER, dataset, key), "w"))
-            generator.flatten(msg)
-
-def download_all_data(dataset="train"):
-    df = pd.read_csv(open(os.path.join(DATA_FOLDER, 'alarms_{}.csv'.format(dataset))), delimiter='--')
-    
-    for i, key in enumerate(df['s3key']):
         print("Downloading email: {}".format(key))
         s3 = boto3.resource('s3')
         s3.meta.client.download_file('monitoring-station', 'emails/{}'.format(key), '{}'.format(os.path.join(dataset, key)))
+        print("Modifying email: {}".format(key))
+        msg = email.message_from_file(open(os.path.join(DATA_FOLDER, dataset, key)))
+        try:
+            images = data_getter.extract_images_from_email_attachment(msg, transform=False)
+            images = apply_bgs_images(images)
+        except:
+            os.system("rm {}".format(os.path.join(dataset, key)))
+            continue
+        msg.set_payload([])
+        for name, image in enumerate(images):
+            full_name = "{}.jpg".format(name)
+            img_str = cv2.imencode(full_name, image)[1].tostring()
+            img = MIMEImage(img_str)
+            img.add_header('Content-Disposition', 'attachment', filename=full_name)
+            msg.attach(img)
+        generator = Generator(open(os.path.join(DATA_FOLDER, dataset, key), "w"))
+        generator.flatten(msg)
+
     
 
 if __name__ == "__main__":
     datasets = ["train"]
     for dataset in datasets:
-        download_all_data(dataset)
         modify_data(dataset)
