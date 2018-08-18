@@ -5,7 +5,7 @@ from requests_futures.sessions import FuturesSession
 import numpy as np
 from PIL import Image
 
-port = 8080
+port = 8888
 session = FuturesSession()
 
 def transform_images(images):
