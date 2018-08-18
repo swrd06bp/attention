@@ -73,8 +73,11 @@ def get_number_examples(dataset="train"):
 
 
 
-def get_data(dataset="train"):
+def get_data(dataset="train", batch_size=1):
     df = pd.read_csv(open(os.path.join(DATA_FOLDER, 'alarms_{}.csv'.format(dataset))), delimiter='--')
+    nb_data = 1
+    all_images = []
+    all_labels = []
     while True:
         df = df.sample(frac=1).reset_index(drop=True)
         for i, key in enumerate(df['s3key']):
@@ -90,5 +93,15 @@ def get_data(dataset="train"):
                 images /= 255
             except:
                 continue
+            
             labels = np.array([int(df['ground_truth'][i])])
-            yield images, labels
+            all_images.append(images[0])
+            all_labels.append(labels[0])
+            if nb_data % batch_size == 0:
+                all_images_temp = all_images
+                all_labels_temp = all_labels
+                all_images = []
+                all_labels = []
+                yield np.array(all_images_temp), np.array(all_labels_temp)
+                
+            nb_data += 1
