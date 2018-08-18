@@ -26,7 +26,7 @@ class RetinaSensor(object):
         self.img_size = img_size
         self.pth_size = pth_size
 
-    def __call__(self, img_ph, loc):
+    def __call__(self, img_ph, loc, init=False):
         # # change loc[:, 2] to be between 0 and 2
         # # ex nb_loc = 1.2
         nb_loc =  tf.add(loc[:, 2], 1)
@@ -55,24 +55,29 @@ class RetinaSensor(object):
           self.img_size[1],
           3
         ])
-    
-        pths = []
-        for i in [1, 2, 4]:
-            pth = tf.image.extract_glimpse(
-                    img,
-                    [int(self.pth_size), int(self.pth_size)],
-                    loc[:, :2])
-            pth = tf.image.resize_images(
-                    pth,
-                    [self.pth_size, self.pth_size]
-                    )
-            pth = tf.expand_dims(pth, -1)
-            pths.append(pth)
+        if not init:
+            pths = []
+            for i in [1, 2, 4]:
+                pth = tf.image.extract_glimpse(
+                        img,
+                        [int(self.pth_size), int(self.pth_size)],
+                        loc[:, :2])
+                pth = tf.image.resize_images(
+                        pth,
+                        [self.pth_size, self.pth_size]
+                        )
+                pth = tf.expand_dims(pth, -1)
+                pths.append(pth)
 
-        pth = tf.concat((pths[0], pths[1]), axis=4)
-        pth = tf.concat((pth, pths[2]), axis=4)
-        pth = tf.multiply(pth, nb_loc)
-        pth = tf.reduce_sum(pth, -1)
+            pth = tf.concat((pths[0], pths[1]), axis=4)
+            pth = tf.concat((pth, pths[2]), axis=4)
+            pth = tf.multiply(pth, nb_loc)
+            pth = tf.reduce_sum(pth, -1)
+        else:
+            pth = tf.image.resize_images(
+                img,
+                [self.pth_size, self.pth_size],
+            )
 
         return tf.reshape(pth, [tf.shape(loc)[0], 3*self.pth_size*self.pth_size])
 
@@ -85,14 +90,15 @@ class GlimpseNetwork(object):
         self.g1_b = _bias_variable((g_size,))
         self.l1_w = _weight_variable((loc_dim, l_size))
         self.l1_b = _bias_variable((l_size,))
-        # layer 2
+        # layer 2 
         self.g2_w = _weight_variable((g_size, output_size))
         self.g2_b = _bias_variable((output_size,))
         self.l2_w = _weight_variable((l_size, output_size))
         self.l2_b = _bias_variable((output_size,))
 
-    def __call__(self, imgs_ph, locs):
-        pths = self.retina_sensor(imgs_ph, locs)
+    def __call__(self, imgs_ph, locs, init=False):
+        
+        pths = self.retina_sensor(imgs_ph, locs, init=init)
 
         g = tf.nn.xw_plus_b(tf.nn.relu(tf.nn.xw_plus_b(pths, self.g1_w, self.g1_b)), self.g2_w, self.g2_b)
         l = tf.nn.xw_plus_b(tf.nn.relu(tf.nn.xw_plus_b(locs, self.l1_w, self.l1_b)), self.l2_w, self.l2_b)
@@ -145,6 +151,8 @@ class RecurrentAttentionModel(object):
 
         cell = BasicLSTMCell(cell_size)
 
+        with tf.variable_scope('InitGlimpseNetwork'):
+            init_glimpse_network = GlimpseNetwork(img_shape, pth_size, loc_dim, g_size, l_size, glimpse_output_size)
         with tf.variable_scope('GlimpseNetwork'):
             glimpse_network = GlimpseNetwork(img_shape, pth_size, loc_dim, g_size, l_size, glimpse_output_size)
         with tf.variable_scope('LocationNetwork'):
@@ -152,10 +160,10 @@ class RecurrentAttentionModel(object):
 
     # Core Network
         batch_size = tf.shape(self.img_ph)[0]
-        init_loc = tf.random_uniform((batch_size, loc_dim), minval=-1, maxval=1)
+        init_loc = tf.random_uniform((batch_size, loc_dim), minval=0, maxval=0)
         init_state = cell.zero_state(batch_size, tf.float32)
 
-        init_glimpse = glimpse_network(self.img_ph, init_loc)
+        init_glimpse = init_glimpse_network(self.img_ph, init_loc, init=True)
         rnn_inputs = [init_glimpse]
         rnn_inputs.extend([0] * num_glimpses)
         
