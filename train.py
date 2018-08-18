@@ -26,8 +26,8 @@ tf.app.flags.DEFINE_integer("g_size", 128, "Size of theta_g^0.")
 tf.app.flags.DEFINE_integer("l_size", 128, "Size of theta_g^1.")
 tf.app.flags.DEFINE_integer("glimpse_output_size", 256, "Output size of Glimpse Network.")
 tf.app.flags.DEFINE_integer("cell_size", 256, "Size of LSTM cell.")
-tf.app.flags.DEFINE_integer("num_glimpses", 10, "Number of glimpses.")
-tf.app.flags.DEFINE_float("variance", 0.22, "Gaussian variance for Location Network.")
+tf.app.flags.DEFINE_integer("num_glimpses", 6, "Number of glimpses.")
+tf.app.flags.DEFINE_float("variance", 0.60, "Gaussian variance for Location Network.")
 tf.app.flags.DEFINE_integer("M", 30, "Monte Carlo sampling, see Eq(2).")
 
 FLAGS = tf.app.flags.FLAGS
@@ -48,7 +48,7 @@ ram = RecurrentAttentionModel(img_shape=(240, 320, 3), # MNIST: 28 * 28
     learning_rate=FLAGS.learning_rate,
     learning_rate_decay_factor=FLAGS.learning_rate_decay_factor,
     min_learning_rate=FLAGS.min_learning_rate,
-    training_steps_per_epoch=600,
+    training_steps_per_epoch=data_getter.get_number_examples("train"),
     max_gradient_norm=FLAGS.max_gradient_norm, 
     is_training=True)
 
@@ -65,8 +65,11 @@ def train():
     losses = 0
     xents = 0
     epochs = 0
-    number_examples = data_getter.get_number_examples("train")
     
+    number_examples = 5000#data_getter.get_number_examples("train")
+    number_steps_calculate_reward = 1000
+    number_steps_boxes_vis = 50
+
     utils.reset()
 
     with tf.Session() as sess:
@@ -74,8 +77,7 @@ def train():
         sess.run(tf.global_variables_initializer())
         # saver.restore(sess, "/tmp/model.ckpt")
         # print("Model restored.")
-
-        for step, data in enumerate(data_getter.get_data("train")):
+        for step, data in enumerate(data_getter.get_data("train", batch_size=32)):
             
             ram.is_training = True
             images, labels = data
@@ -108,15 +110,15 @@ def train():
             rewards += reward 
             xents += xent
 
-            if step and step % 10 == 0:
+            if step and step % number_steps_boxes_vis == 0:
                 utils.render_results(images, locs, prediction_model, labels)
 
-            if step and step % 100 == 0:
-                rewards /= 100
-                advantages /= 100
-                xents /= 100
-                losses /= 100
-                baselines_mses /= 100
+            if step and step % number_steps_calculate_reward == 0:
+                rewards /= number_steps_calculate_reward
+                advantages /= number_steps_calculate_reward
+                xents /= number_steps_calculate_reward
+                losses /= number_steps_calculate_reward
+                baselines_mses /= number_steps_calculate_reward
                 
                 log_activity.render_training_steps(step, learning_rate,
                     losses, xents, rewards, advantages, baselines_mses)
@@ -130,13 +132,14 @@ def train():
             if step and step % number_examples == 0:
                 reduction, recall, accuracy = Tester(sess, ram).evaluate_model()
                 log_activity.render_evaluation(epochs, reduction, recall, accuracy) 
+                save_model(sess, epochs)
                 epochs += 1
     return sess
     
-def save_model(ram):
-      save_path = saver.save(sess, "/tmp/model.ckpt")
+def save_model(sess, save_name):
+      save_path = saver.save(sess, "saved_models/model_{}.ckpt".format(save_name))
       print("Model saved in file: %s" % save_path)
 
 if __name__ == "__main__":
     sess = train()
-    save_model(sess)
+    save_model(sess, "final")

@@ -9,7 +9,7 @@ class Tester(object):
     def __init__(self, sess, ram):
         self.ram = ram
         self.sess = sess
-        self.number_examples = data_getter.get_number_examples("train")
+        self.number_examples = 10000#data_getter.get_number_examples("train")
     
 
     def evaluate_model(self):
@@ -18,7 +18,7 @@ class Tester(object):
         all_predictions = []
         all_labels = []
 
-        for steps, data in enumerate(data_getter.get_data("train")):
+        for steps, data in enumerate(data_getter.get_data("test")):
             images, labels = data
             
             predictions, locs = self.sess.run(
